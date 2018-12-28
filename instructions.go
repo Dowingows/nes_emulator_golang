@@ -4,6 +4,43 @@ import (
 	"fmt"
 )
 
+// addressing modes
+const (
+	_ = iota
+	modeAbsolute
+	modeAbsoluteX
+	modeAbsoluteY
+	modeAccumulator
+	modeImmediate
+	modeImplied
+	modeIndexedIndirect
+	modeIndirect
+	modeIndirectIndexed
+	modeRelative
+	modeZeroPage
+	modeZeroPageX
+	modeZeroPageY
+)
+
+var instrsMode = [256]byte{
+	6, 7, 6, 7, 11, 11, 11, 11, 6, 5, 4, 5, 1, 1, 1, 1,
+	10, 9, 6, 9, 12, 12, 12, 12, 6, 3, 6, 3, 2, 2, 2, 2,
+	1, 7, 6, 7, 11, 11, 11, 11, 6, 5, 4, 5, 1, 1, 1, 1,
+	10, 9, 6, 9, 12, 12, 12, 12, 6, 3, 6, 3, 2, 2, 2, 2,
+	6, 7, 6, 7, 11, 11, 11, 11, 6, 5, 4, 5, 1, 1, 1, 1,
+	10, 9, 6, 9, 12, 12, 12, 12, 6, 3, 6, 3, 2, 2, 2, 2,
+	6, 7, 6, 7, 11, 11, 11, 11, 6, 5, 4, 5, 8, 1, 1, 1,
+	10, 9, 6, 9, 12, 12, 12, 12, 6, 3, 6, 3, 2, 2, 2, 2,
+	5, 7, 5, 7, 11, 11, 11, 11, 6, 5, 6, 5, 1, 1, 1, 1,
+	10, 9, 6, 9, 12, 12, 13, 13, 6, 3, 6, 3, 2, 2, 3, 3,
+	5, 7, 5, 7, 11, 11, 11, 11, 6, 5, 6, 5, 1, 1, 1, 1,
+	10, 9, 6, 9, 12, 12, 13, 13, 6, 3, 6, 3, 2, 2, 3, 3,
+	5, 7, 5, 7, 11, 11, 11, 11, 6, 5, 6, 5, 1, 1, 1, 1,
+	10, 9, 6, 9, 12, 12, 12, 12, 6, 3, 6, 3, 2, 2, 2, 2,
+	5, 7, 5, 7, 11, 11, 11, 11, 6, 5, 6, 5, 1, 1, 1, 1,
+	10, 9, 6, 9, 12, 12, 12, 12, 6, 3, 6, 3, 2, 2, 2, 2,
+}
+
 //Instruction is a Struct to save opcode, mnemonic and func
 type Instruction struct {
 	opcode    uint8
@@ -29,167 +66,77 @@ func (instructionsTable InstructionsTable) get(opcode byte) Instruction {
 
 func newInstructionsTable() InstructionsTable {
 	instructions := InstructionsTable{}
-	instructions.add(Instruction{0x00, "BRK", func(cpu *CPU) {
 
-	}})
-	instructions.add(Instruction{0x01, "ORA", func(cpu *CPU) {
+	//JSR
+	for _, val := range []uint8{0x20} {
+		opcode := val
+		instructions.add(Instruction{opcode, "JSR", func(cpu *CPU) {
+			addr := cpu.solveTypeAddress(opcode)
+			cpu.Jsr(addr)
+			fmt.Printf(" | [%04X] %04x |", addr, cpu.memory.fetch(addr))
+		}})
+	}
 
-	}})
+	//LDA
+
+	for _, val := range []uint8{0xA5, 0xA9} {
+		opcode := val
+		instructions.add(Instruction{opcode, "LDA", func(cpu *CPU) {
+			addr := cpu.solveTypeAddress(opcode)
+			cpu.Lda(addr)
+			fmt.Printf(" | [%04X] %04x |", addr, cpu.memory.fetch(addr))
+		}})
+	}
 
 	//LDX
 
-	instructions.add(Instruction{0xA2, "LDX", func(cpu *CPU) {
-		addr := cpu.immediateAddress()
-		cpu.Ldx(addr)
-		fmt.Printf(" #$%02X", cpu.memory.fetch(addr))
-	}})
-	instructions.add(Instruction{0x05, "ORA", func(cpu *CPU) {
+	for _, val := range []uint8{0xA2} {
+		opcode := val
+		instructions.add(Instruction{opcode, "LDX", func(cpu *CPU) {
+			addr := cpu.solveTypeAddress(opcode)
+			cpu.Ldx(addr)
+			fmt.Printf(" | [%04X] %04x |", addr, cpu.memory.fetch(addr))
+		}})
+	}
 
-	}})
-	instructions.add(Instruction{0x06, "ASL", func(cpu *CPU) {
+	//LDY
+	for _, val := range []uint8{0xA0} {
+		opcode := val
+		instructions.add(Instruction{opcode, "LDY", func(cpu *CPU) {
+			addr := cpu.solveTypeAddress(opcode)
+			cpu.Ldy(addr)
+			fmt.Printf(" | [%04X] %04x |", addr, cpu.memory.fetch(addr))
+		}})
+	}
 
-	}})
-	instructions.add(Instruction{0x08, "PHP", func(cpu *CPU) {
+	//STY
+	for _, val := range []uint8{0x8C} {
+		opcode := val
+		instructions.add(Instruction{opcode, "STY", func(cpu *CPU) {
+			addr := cpu.solveTypeAddress(opcode)
+			cpu.store(addr, cpu.registers.Y)
+			fmt.Printf(" | [%04X] %04x |", addr, cpu.memory.fetch(addr))
+		}})
+	}
+	//STA
+	for _, val := range []uint8{0x85, 0x8D} {
+		opcode := val
+		instructions.add(Instruction{opcode, "STA", func(cpu *CPU) {
+			addr := cpu.solveTypeAddress(opcode)
+			cpu.store(addr, cpu.registers.A)
+			fmt.Printf(" | [%04X] %04x |", addr, cpu.memory.fetch(addr))
+		}})
+	}
 
-	}})
-	instructions.add(Instruction{0x09, "ORA", func(cpu *CPU) {
-
-	}})
-	instructions.add(Instruction{0x0A, "ASL", func(cpu *CPU) {
-
-	}})
-	instructions.add(Instruction{0x0B, "0D", func(cpu *CPU) {
-
-	}})
-
-	instructions.add(Instruction{0xEA, "NOP", func(cpu *CPU) {
-
-	}})
-
-	instructions.add(Instruction{0x20, "JSR", func(cpu *CPU) {
-		addr := cpu.absoluteAddress()
-		cpu.Jsr(addr)
-		fmt.Printf(" $%04X", addr)
-	}})
-
-	instructions.add(Instruction{0xA9, "LDA", func(cpu *CPU) {
-		//this is immediate addressing
-		addr := cpu.immediateAddress()
-		cpu.Lda(addr)
-		fmt.Printf(" #$%02X", cpu.memory.fetch(addr))
-	}})
-	instructions.add(Instruction{0xA5, "LDA", func(cpu *CPU) {
-		//this is zero page addressing
-		addr := cpu.zeroPageAddress()
-		cpu.Lda(addr)
-		fmt.Printf(" $%02X", addr)
-	}})
-	instructions.add(Instruction{0xB5, "LDA", func(cpu *CPU) {
-
-	}})
-	instructions.add(Instruction{0xAD, "LDA", func(cpu *CPU) {
-
-	}})
-	instructions.add(Instruction{0xBD, "LDA", func(cpu *CPU) {
-
-	}})
-	instructions.add(Instruction{0xB9, "LDA", func(cpu *CPU) {
-
-	}})
-	instructions.add(Instruction{0xA1, "LDA", func(cpu *CPU) {
-
-	}})
-	instructions.add(Instruction{0xB1, "LDA", func(cpu *CPU) {
-
-	}})
-
-	instructions.add(Instruction{0xA0, "LDY", func(cpu *CPU) {
-		//this is immediate addressing
-		addr := cpu.immediateAddress()
-		cpu.Ldy(addr)
-		fmt.Printf(" #$%02X", cpu.memory.fetch(addr))
-	}})
-
-	instructions.add(Instruction{0x8C, "STY", func(cpu *CPU) {
-		//Absolute addressing. We must use two bytes to operand
-		addr := cpu.absoluteAddress()
-		cpu.store(addr, cpu.registers.Y)
-		fmt.Printf(" $%04X", addr)
-	}})
-
-	instructions.add(Instruction{0x60, "RTS", func(cpu *CPU) {
-
-	}})
-
-	instructions.add(Instruction{0x48, "PHA", func(cpu *CPU) {
-
-	}})
-
-	instructions.add(Instruction{0x81, "STA", func(cpu *CPU) {
-
-	}})
-
-	instructions.add(Instruction{0x85, "STA", func(cpu *CPU) {
-		// Zero page addressing.
-		addr := cpu.zeroPageAddress()
-		cpu.store(addr, cpu.registers.A)
-		fmt.Printf(" $%02X", addr)
-	}})
-
-	instructions.add(Instruction{0x8D, "STA", func(cpu *CPU) {
-		//Absolute addressing. We must use two bytes to operand
-		addr := cpu.absoluteAddress()
-		cpu.store(addr, cpu.registers.A)
-		fmt.Printf(" $%04X", addr)
-	}})
-
-	instructions.add(Instruction{0x91, "STA", func(cpu *CPU) {
-
-	}})
-
-	instructions.add(Instruction{0x95, "STA", func(cpu *CPU) {
-
-	}})
-
-	instructions.add(Instruction{0x99, "STA", func(cpu *CPU) {
-
-	}})
-
-	instructions.add(Instruction{0x9D, "STA", func(cpu *CPU) {
-
-	}})
-
-	instructions.add(Instruction{0x68, "PLA", func(cpu *CPU) {
-
-	}})
-
-	instructions.add(Instruction{0x30, "BMI", func(cpu *CPU) {
-
-	}})
-
-	instructions.add(Instruction{0x4C, "JMP", func(cpu *CPU) {
-
-	}})
-
-	instructions.add(Instruction{0x6C, "JMP", func(cpu *CPU) {
-
-	}})
-
-	instructions.add(Instruction{0x10, "BPL", func(cpu *CPU) {
-
-	}})
-
-	instructions.add(Instruction{0x78, "SEI", func(cpu *CPU) {
-
-	}})
-
-	instructions.add(Instruction{0x18, "CLC", func(cpu *CPU) {
-		fmt.Printf("\nCLC\n")
-	}})
-
-	instructions.add(Instruction{0x6C, "JMP", func(cpu *CPU) {
-		fmt.Printf("\nJMP\n")
-	}})
+	//LSR
+	for _, val := range []uint8{0x4A} {
+		opcode := val
+		instructions.add(Instruction{opcode, "LSR", func(cpu *CPU) {
+			addr := cpu.solveTypeAddress(opcode)
+			cpu.store(addr, cpu.registers.A)
+			fmt.Printf(" | [%04X] %04x |", addr, cpu.memory.fetch(addr))
+		}})
+	}
 
 	return instructions
 }

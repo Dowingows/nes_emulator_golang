@@ -49,6 +49,28 @@ func (cpu *CPU) execute(opcode byte) {
 
 ///Adressing modes
 
+func (cpu *CPU) solveTypeAddress(opcode uint8) uint16 {
+
+	addr := uint16(0)
+
+	switch instrsMode[opcode] {
+	case modeAbsolute:
+		addr = cpu.absoluteAddress()
+		break
+	case modeImmediate:
+		//this is immediate addressing
+		addr = cpu.immediateAddress()
+		break
+	case modeZeroPage:
+		addr = cpu.zeroPageAddress()
+		break
+	default:
+		fmt.Printf("\n* * * * Não encontrado esse MODE!! %d * * * * \n", instrsMode[opcode])
+		return 0
+	}
+	return addr
+}
+
 func (cpu *CPU) immediateAddress() uint16 {
 	addr := cpu.registers.PC
 	cpu.registers.PC++
@@ -56,7 +78,8 @@ func (cpu *CPU) immediateAddress() uint16 {
 }
 
 func (cpu *CPU) zeroPageAddress() uint16 {
-	addr := uint16(00)<<8 | uint16(cpu.memory.fetch(cpu.registers.PC))
+
+	addr := uint16(cpu.memory.fetch(cpu.registers.PC))
 	cpu.registers.PC++
 	return addr
 }
@@ -80,7 +103,7 @@ func (cpu *CPU) run() {
 		cpu.registers.PC++
 
 		if instr.fetch == nil {
-			continue
+			break
 		}
 
 		instr.fetch(cpu)
