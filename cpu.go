@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"io/ioutil"
+	"log"
 )
 
 //CPU of our NES emulator
@@ -29,7 +30,9 @@ func check(e error) {
 }
 
 func (cpu *CPU) load(addr uint16, register *uint8) {
-	*register = cpu.memory.fetch(addr)
+	value := cpu.memory.fetch(addr)
+	cpu.setZNFlags(value)
+	*register = value
 }
 
 func (cpu *CPU) store(addr uint16, value uint8) {
@@ -91,11 +94,30 @@ func (cpu *CPU) absoluteAddress() uint16 {
 	return addr
 }
 
+func (cpu *CPU) relativeAddress() (addr uint16) {
+	value := uint16(cpu.memory.fetch(cpu.registers.PC))
+	cpu.registers.PC++
+
+	var offset uint16
+
+	if value > 0x7f {
+		offset = -(0x0100 - value)
+	} else {
+		offset = value
+	}
+
+	addr = cpu.registers.PC + offset
+
+	return
+}
+
 func (cpu *CPU) run() {
+
 	i := 0
-	stopIn := 22
+	stopIn := 39
 	fmt.Println()
 	for {
+		//cpu.printRegisters()
 		i++
 		opcode := cpu.memory[cpu.registers.PC]
 		instr := cpu.instructionsTable.get(opcode)
@@ -103,11 +125,11 @@ func (cpu *CPU) run() {
 		cpu.registers.PC++
 
 		if instr.fetch == nil {
-			break
+			continue
 		}
 
 		instr.fetch(cpu)
-
+		fmt.Printf("   <{PC: %04x | A:%02x | X: %02x | Y: %02x | SP: %02x | P: %08b (%02x) }> ", cpu.registers.PC, cpu.registers.A, cpu.registers.X, cpu.registers.Y, cpu.registers.SP, cpu.registers.P, cpu.registers.P)
 		if instr.opcode == 0x00 || i >= stopIn {
 			break
 		}
@@ -153,6 +175,10 @@ func (cpu *CPU) Ldx(addr uint16) {
 	cpu.load(addr, &cpu.registers.X)
 }
 
+func (cpu *CPU) Txs() {
+	cpu.registers.SP = cpu.registers.X
+}
+
 //Ldy Load value from a memory addr to Y register
 func (cpu *CPU) Ldy(addr uint16) {
 	cpu.load(addr, &cpu.registers.Y)
@@ -163,13 +189,165 @@ func (cpu *CPU) Sta(addr uint16) {
 	cpu.memory.store(addr, cpu.registers.A)
 }
 
+//Stx Store  X register in a memory address
+func (cpu *CPU) Stx(addr uint16) {
+	cpu.memory.store(addr, cpu.registers.X)
+}
+
+//Nop doenst anything
+func (cpu *CPU) Nop() {
+
+}
+
+func (cpu *CPU) Sei() {
+
+}
+
+//Sec sets to one the 'C' flag the register P
+func (cpu *CPU) Sec() {
+	cpu.registers.P = setBit(cpu.registers.P, C)
+}
+
+// Sets the bit at pos in the integer n.
+func setBit(n Status, pos Status) Status {
+	n |= (1 << pos)
+	return n
+}
+
+// Clears the bit at pos in n.
+func clearBit(n Status, pos Status) Status {
+	mask := ^(1 << uint(pos))
+	n &= Status(mask)
+	return n
+}
+
+//Clc clear the 'C' flag the register P
+func (cpu *CPU) Clc() {
+	cpu.registers.P = clearBit(cpu.registers.P, C)
+}
+
 /*Jsr pushes the address-1 of the next operation on to the stack
  *	before transferring program control to the following address
  */
 func (cpu *CPU) Jsr(address uint16) {
 	value := cpu.registers.PC - 1
 	cpu.push16(value)
-	//Descomentar depois!!! cpu.registers.PC = address
+	cpu.registers.PC = address
+}
+
+/*Lsr shifts all bits right one position.
+ *0 is shifted into bit 7 and the original bit 0 is shifted into the Carry.
+ */
+func (cpu *CPU) Lsr(addr uint16) {
+	value := cpu.shift(1, cpu.memory.fetch(addr))
+	cpu.memory.store(addr, value)
+}
+
+func (cpu *CPU) Bcs(addr uint16) {
+	if cpu.registers.P&(C+1) != 0 {
+		cpu.registers.PC = addr
+	}
+}
+
+func (cpu *CPU) Bcc(addr uint16) {
+	if cpu.registers.P&(C+1) == 0 {
+		cpu.registers.PC = addr
+	}
+}
+
+//Bne If the zero flag is clear then add the relative displacement to the program counter to cause a branch to a new location.
+func (cpu *CPU) Bne(addr uint16) {
+	if cpu.registers.P&(Z+1) == 0 {
+		cpu.registers.PC = addr
+	}
+}
+
+//Beq If the zero flag is set then add the relative displacement to the program counter to cause a branch to a new location.
+func (cpu *CPU) Beq(addr uint16) {
+	if cpu.registers.P&(Z+1) != 0 {
+		cpu.registers.PC = addr
+	}
+}
+
+func (cpu *CPU) Bpl(addr uint16) {
+	if cpu.registers.P&N == 0 {
+		cpu.registers.PC = addr
+	}
+}
+
+//Bit Necessário dá uma refatorada depois para ficar mais clara
+func (cpu *CPU) Bit(addr uint16) {
+	value := cpu.memory.fetch(addr)
+	cpu.setZFlag(value & cpu.registers.A)
+	cpu.registers.P = (cpu.registers.P & ^(N) & ^(V)) | Status(value&uint8((V)|(N)))
+}
+
+/*LsrA is a LSR in mode Accumulator
+ *
+ */
+func (cpu *CPU) LsrA() {
+	value := cpu.shift(1, cpu.registers.A)
+	cpu.registers.A = value
+}
+
+func (cpu *CPU) shift(direction int, value uint8) uint8 {
+
+	c := Status(0)
+
+	switch direction {
+	case 0:
+		c = Status((value & uint8(N)) >> 7)
+		value <<= 1
+	case 1:
+		c = Status(value & uint8(C))
+		value >>= 1
+	}
+
+	cpu.registers.P &= ^C
+	cpu.registers.P |= c
+
+	return value
+}
+
+func (cpu *CPU) Jmp(addr uint16) {
+	cpu.registers.PC = addr
+}
+
+func (cpu *CPU) Dec(addr uint16) {
+	value := cpu.memory.fetch(addr)
+	cpu.memory.store(addr, cpu.setZNFlags(value-1))
+}
+
+func (cpu *CPU) setZFlag(value uint8) uint8 {
+	if value == 0 {
+		cpu.registers.P = Status(setBit(cpu.registers.P, Z))
+	} else {
+		cpu.registers.P = Status(clearBit(cpu.registers.P, Z))
+	}
+
+	return value
+}
+
+func (cpu *CPU) setNFlag(value uint8) uint8 {
+	if value != 0 {
+		cpu.registers.P = Status(setBit(cpu.registers.P, N))
+	} else {
+		cpu.registers.P = Status(clearBit(cpu.registers.P, N))
+	}
+
+	return value
+}
+
+func (cpu *CPU) setZNFlags(value uint8) uint8 {
+	cpu.setZFlag(value)
+	cpu.setNFlag(value)
+	return value
+}
+
+//Inc sets
+func (cpu *CPU) Inc(addr uint16) {
+	value := cpu.memory.fetch(addr)
+	cpu.memory.store(addr, cpu.setZNFlags(value+1))
 }
 
 func main() {
@@ -186,15 +364,27 @@ func main() {
 	//instr.fetch(&cpu)
 	//fmt.Println(cpu.instructionsTable.get(0))
 
-	path := "tests/cpu_test.asm"
+	path := "tests/nestest.nes"
 	data, _ := ioutil.ReadFile(path)
-	cpu.printRegisters()
-	cpu.memory.loadCode(data, cpu.registers.PC)
-	cpu.run()
-	cpu.printRegisters()
-	/*if string(data[:3]) != "NES" {
+
+	if string(data[:3]) != "NES" {
 		log.Fatalf("Invalid ROM file" + string(data[:3]))
-	}*/
+	}
+	//header := data[:16]
+
+	//fmt.Print(header)
+	//fmt.Printf("\n %s | %02X | PRG-ROM: %02X | CHR-ROM: %02X \n| ROM CTRL BYTE 1: %02X | ROM CTRL BYTE 2: %02X |  N RAM BANKS: %02X\n", string(header[:3]), header[3:4], header[4:5], header[5:6], header[6:7], header[7:8], header[7:9])
+	NumPRG := uint16(data[5])
+	//NumCHR := header[5:6][0]
+
+	prg := data[16 : 16+NumPRG*16384]
+
+	//cpu.printRegisters()
+	cpu.registers.P = 36
+	cpu.registers.PC = 0xC000
+	cpu.memory.loadCode(prg, cpu.registers.PC)
+	cpu.run()
+	//cpu.printRegisters()
 
 	//path := "roms/galaga.nes"
 	//path := "tests/cpu_dummy_reads.nes"

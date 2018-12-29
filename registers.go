@@ -5,14 +5,14 @@ type Status uint8
 
 //Flags used by P (Status) register
 const (
-	C Status = 1 << iota // carry flag
-	Z                    // zero flag
-	I                    // interrupt disable
-	D                    // decimal mode
-	B                    // break command
-	U                    // -UNUSED-
-	V                    // overflow flag
-	N                    // negative flag
+	C Status = iota // carry flag | position 0 in byte
+	Z               // zero flag
+	I               // interrupt disable
+	D               // decimal mode
+	B               // break command
+	U               // -UNUSED-
+	V               // overflow flag
+	N               // negative flag | position 7
 )
 
 //Registers of processor
@@ -42,7 +42,6 @@ func (reg *Registers) reset() {
 	reg.X = 0
 	reg.Y = 0
 	reg.P = I
-	reg.SP = 0xfd //253
-	//reg.PC = 0xfffc //65532
-	reg.PC = 0xff00 //65532
+	reg.SP = 0xfd   //253
+	reg.PC = 0xfffc //65532
 }

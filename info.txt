@@ -5,3 +5,5 @@ A MOS 6502 simulator written in Go : https://github.com/nwidger/m65go2
 
 
 Lets make a nes emulator: https://www.youtube.com/watch?v=PaYylbgvkCM&list=PL8UR9GrETyHjOW4Px3Y1J4GYkzoba1wfu&index=9
+
+http://www.obelisk.me.uk/6502/reference.html#BEQ
