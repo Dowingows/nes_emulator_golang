@@ -114,23 +114,24 @@ func (cpu *CPU) relativeAddress() (addr uint16) {
 func (cpu *CPU) run() {
 
 	i := 0
-	stopIn := 73
+	//stopIn := 386
 	fmt.Println()
 	for {
 		//cpu.printRegisters()
 		i++
 		opcode := cpu.memory[cpu.registers.PC]
 		instr := cpu.instructionsTable.get(opcode)
-		fmt.Printf(" [%2x]: %s ", opcode, instr.mneumonic)
+		fmt.Printf("%d - [%2x]: %s ", i, opcode, instr.mneumonic)
 		cpu.registers.PC++
 
 		if instr.fetch == nil {
-			continue
+			log.Fatalf("Instrução não encontrada!! Abortar <{Opcode: 0x%02x}>", opcode)
+			break
 		}
 
 		instr.fetch(cpu)
 		fmt.Printf("   <{PC: %04x | A:%02x | X: %02x | Y: %02x | SP: %02x | P: %08b (%02x) }> ", cpu.registers.PC, cpu.registers.A, cpu.registers.X, cpu.registers.Y, cpu.registers.SP, cpu.registers.P, cpu.registers.P)
-		if instr.opcode == 0x00 || i >= stopIn {
+		if instr.opcode == 0x00 /*|| i >= stopIn */ {
 			break
 		}
 		fmt.Println()
@@ -214,11 +215,23 @@ func (cpu *CPU) Sed() {
 }
 
 func (cpu *CPU) Php() {
-	cpu.push(uint8(cpu.registers.P))
+	// Não sei pq setei o bit B, usei só para ficar igual ao resultado do nestest.log
+	cpu.push(uint8(setBit(cpu.registers.P, B)))
+}
+
+func (cpu *CPU) Pha() {
+	// Não sei pq setei o bit B, usei só para ficar igual ao resultado do nestest.log
+	cpu.push(cpu.registers.A)
 }
 
 func (cpu *CPU) Pla() {
-	cpu.registers.A = cpu.setZFlag(cpu.pull()) //DÚVIDA!! NÃO SEI SE É Z OU ZN
+	cpu.registers.A = cpu.setZNFlags(cpu.pull()) //DÚVIDA!! NÃO SEI SE É Z OU ZN
+}
+
+func (cpu *CPU) Plp() {
+	value := Status(cpu.pull())
+	cpu.registers.P = clearBit(value, B)
+	cpu.registers.P = setBit(value, U)
 }
 
 // Sets the bit at pos in the integer n.
@@ -237,6 +250,16 @@ func clearBit(n Status, pos Status) Status {
 //Clc clear the 'C' flag the register P
 func (cpu *CPU) Clc() {
 	cpu.registers.P = clearBit(cpu.registers.P, C)
+}
+
+//Cld clear the 'd' flag the register P
+func (cpu *CPU) Cld() {
+	cpu.registers.P = clearBit(cpu.registers.P, D)
+}
+
+//Clc clear the 'V' flag the register P
+func (cpu *CPU) Clv() {
+	cpu.registers.P = clearBit(cpu.registers.P, V)
 }
 
 /*Jsr pushes the address-1 of the next operation on to the stack
@@ -262,13 +285,13 @@ func (cpu *CPU) Lsr(addr uint16) {
 }
 
 func (cpu *CPU) Bcs(addr uint16) {
-	if cpu.registers.P&(C+1) != 0 {
+	if getBit(uint8(cpu.registers.P), uint8(C)) != 0 {
 		cpu.registers.PC = addr
 	}
 }
 
 func (cpu *CPU) Bcc(addr uint16) {
-	if cpu.registers.P&(C+1) == 0 {
+	if getBit(uint8(cpu.registers.P), uint8(C)) == 0 {
 		cpu.registers.PC = addr
 	}
 }
@@ -304,6 +327,13 @@ func (cpu *CPU) Bne(addr uint16) {
 //Beq If the zero flag is set then add the relative displacement to the program counter to cause a branch to a new location.
 func (cpu *CPU) Beq(addr uint16) {
 	if cpu.registers.P&(Z+1) != 0 {
+		cpu.registers.PC = addr
+	}
+}
+
+//Bmi If the negative flag is set then add the relative displacement to the program counter to cause a branch to a new location.
+func (cpu *CPU) Bmi(addr uint16) {
+	if getBit(uint8(cpu.registers.P), uint8(N)) != 0 {
 		cpu.registers.PC = addr
 	}
 }
@@ -381,7 +411,7 @@ func (cpu *CPU) setZFlag(value uint8) uint8 {
 }
 
 func (cpu *CPU) setNFlag(value uint8) uint8 {
-	if value != 0 {
+	if getBit(uint8(value), uint8(N)) != 0 {
 		cpu.registers.P = Status(setBit(cpu.registers.P, N))
 	} else {
 		cpu.registers.P = Status(clearBit(cpu.registers.P, N))
@@ -402,10 +432,107 @@ func (cpu *CPU) Inc(addr uint16) {
 	cpu.memory.store(addr, cpu.setZNFlags(value+1))
 }
 
+//Adc add with carry | Função dando bugs, consertar depois!!!!!!!!
+func (cpu *CPU) Adc(addr uint16) {
+
+	value := uint16(cpu.memory.fetch(addr))
+	registerA := cpu.registers.A
+	if getBit(uint8(cpu.registers.P), uint8(D)) == 0 {
+		result := cpu.setCFlagAddition(int(registerA) + int(value) + int(getBit(uint8(cpu.registers.P), uint8(C))))
+		cpu.registers.A = cpu.setZNFlags(cpu.setVFlagAddition(uint16(registerA), uint16(value), uint16(result)))
+	} else {
+
+		low := uint16(registerA&0x000f) + uint16(value&0x000f) + uint16(getBit(uint8(cpu.registers.P), uint8(C)))
+		high := uint16(registerA&0x00f0) + uint16(value&0x00f0)
+
+		/*if low >= 0x000a {
+			low -= 0x000a
+			high += 0x0010
+		}
+
+		if high >= 0x00a0 {
+			high -= 0x00a0
+		}*/
+		result := cpu.setCFlagAddition(int(high | (low & 0x000f)))
+
+		result = cpu.setVFlagAddition(uint16(registerA), uint16(value), uint16(result))
+		result = cpu.setZNFlags(result)
+		cpu.registers.A = result
+	}
+}
+
+func (cpu *CPU) setCFlagAddition(value int) uint8 {
+	if value > 0xFF {
+		cpu.registers.P = setBit(cpu.registers.P, C)
+	} else {
+		cpu.registers.P = clearBit(cpu.registers.P, C)
+	}
+	return uint8(value)
+}
+
+func (cpu *CPU) setVFlagAddition(num1 uint16, num2 uint16, result uint16) uint8 {
+	if ((num1^num2)&0x80 == 0x0) && ((num1^result)&0x80 == 0x80) {
+		cpu.registers.P = setBit(cpu.registers.P, V)
+	} else {
+		cpu.registers.P = clearBit(cpu.registers.P, V)
+	}
+	return uint8(result)
+}
+
 func (cpu *CPU) And(addr uint16) {
 	value := cpu.memory.fetch(addr)
-	cpu.registers.A = cpu.setZFlag(cpu.registers.A & value)
+	cpu.registers.A = cpu.setZNFlags(cpu.registers.A & value)
 
+}
+
+func (cpu *CPU) Ora(addr uint16) {
+	value := cpu.memory.fetch(addr)
+	cpu.registers.A = cpu.setZNFlags(cpu.registers.A | value)
+}
+
+func (cpu *CPU) Eor(addr uint16) {
+	value := cpu.memory.fetch(addr)
+	cpu.registers.A = cpu.setZNFlags(cpu.registers.A ^ value)
+}
+
+//compareMemReg is a generic function to compare memory values with registers
+func (cpu *CPU) compareMemReg(addr uint16, register *byte) {
+	value := cpu.memory.fetch(addr)
+
+	result := *register - value
+
+	if *register >= value {
+		cpu.registers.P = setBit(cpu.registers.P, C)
+	} else {
+		cpu.registers.P = clearBit(cpu.registers.P, C)
+	}
+
+	if *register == value {
+		cpu.registers.P = setBit(cpu.registers.P, Z)
+	} else {
+		cpu.registers.P = clearBit(cpu.registers.P, Z)
+	}
+
+	if getBit(uint8(result), uint8(N)) == 1 {
+		cpu.registers.P = setBit(cpu.registers.P, N)
+	} else {
+		cpu.registers.P = clearBit(cpu.registers.P, N)
+	}
+}
+
+//Cmp instruction compares the contents of the accumulator with another memory held value and sets the zero and carry flags as appropriate.
+func (cpu *CPU) Cmp(addr uint16) {
+	cpu.compareMemReg(addr, &cpu.registers.A)
+}
+
+//Cpy compares mem with register Y
+func (cpu *CPU) Cpy(addr uint16) {
+	cpu.compareMemReg(addr, &cpu.registers.Y)
+}
+
+//Cpx compares mem with register X
+func (cpu *CPU) Cpx(addr uint16) {
+	cpu.compareMemReg(addr, &cpu.registers.X)
 }
 
 func main() {
@@ -413,7 +540,7 @@ func main() {
 	var m Memory
 	cpu := CPU{}
 	cpu.init(m)
-
+	fmt.Printf("\n Número de instruções: %d", len(cpu.instructionsTable))
 	/*for _, value := range cpu.instructionsTable {
 		fmt.Printf(value.toString())
 	}*/

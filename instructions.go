@@ -233,6 +233,16 @@ func newInstructionsTable() InstructionsTable {
 		}})
 	}
 
+	//BMI
+	for _, val := range []uint8{0x30} {
+		opcode := val
+		instructions.add(Instruction{opcode, "BMI", func(cpu *CPU) {
+			addr := cpu.relativeAddress()
+			cpu.Bmi(addr)
+			fmt.Printf(" | [%04X] %04x |", addr, cpu.memory.fetch(addr))
+		}})
+	}
+
 	//BNE
 	for _, val := range []uint8{0xD0} {
 		opcode := val
@@ -283,9 +293,28 @@ func newInstructionsTable() InstructionsTable {
 	for _, val := range []uint8{0xC9} {
 		opcode := val
 		instructions.add(Instruction{opcode, "CMP", func(cpu *CPU) {
-			/*FALTANDO IMPLEMENTAR*/
 			addr := cpu.solveTypeAddress(opcode)
+			cpu.Cmp(addr)
+			fmt.Printf(" | [%04X] %04x |", addr, cpu.memory.fetch(addr))
+		}})
+	}
 
+	//CPX
+	for _, val := range []uint8{0xE0} {
+		opcode := val
+		instructions.add(Instruction{opcode, "CPX", func(cpu *CPU) {
+			addr := cpu.solveTypeAddress(opcode)
+			cpu.Cpx(addr)
+			fmt.Printf(" | [%04X] %04x |", addr, cpu.memory.fetch(addr))
+		}})
+	}
+
+	//Cpy
+	for _, val := range []uint8{0xC0} {
+		opcode := val
+		instructions.add(Instruction{opcode, "CPY", func(cpu *CPU) {
+			addr := cpu.solveTypeAddress(opcode)
+			cpu.Cpy(addr)
 			fmt.Printf(" | [%04X] %04x |", addr, cpu.memory.fetch(addr))
 		}})
 	}
@@ -314,11 +343,27 @@ func newInstructionsTable() InstructionsTable {
 		}})
 	}
 
+	//PHA
+	for _, val := range []uint8{0x48} {
+		opcode := val
+		instructions.add(Instruction{opcode, "PHA", func(cpu *CPU) {
+			cpu.Pha()
+		}})
+	}
+
 	//PLA
 	for _, val := range []uint8{0x68} {
 		opcode := val
 		instructions.add(Instruction{opcode, "PLA", func(cpu *CPU) {
 			cpu.Pla()
+		}})
+	}
+
+	//PLP
+	for _, val := range []uint8{0x28} {
+		opcode := val
+		instructions.add(Instruction{opcode, "PLP", func(cpu *CPU) {
+			cpu.Plp()
 		}})
 	}
 
@@ -348,6 +393,26 @@ func newInstructionsTable() InstructionsTable {
 		}})
 	}
 
+	//ORA
+	for _, val := range []uint8{0x09} {
+		opcode := val
+		instructions.add(Instruction{opcode, "ORA", func(cpu *CPU) {
+			addr := cpu.solveTypeAddress(opcode)
+			cpu.Ora(addr)
+			fmt.Printf(" | [%04X] %04x |", addr, cpu.memory.fetch(addr))
+		}})
+	}
+
+	//EOR
+	for _, val := range []uint8{0x49} {
+		opcode := val
+		instructions.add(Instruction{opcode, "EOR", func(cpu *CPU) {
+			addr := cpu.solveTypeAddress(opcode)
+			cpu.Eor(addr)
+			fmt.Printf(" | [%04X] %04x |", addr, cpu.memory.fetch(addr))
+		}})
+	}
+
 	//SEC
 	for _, val := range []uint8{0x38} {
 		opcode := val
@@ -361,6 +426,32 @@ func newInstructionsTable() InstructionsTable {
 		opcode := val
 		instructions.add(Instruction{opcode, "CLC", func(cpu *CPU) {
 			cpu.Clc()
+		}})
+	}
+
+	//CLD
+	for _, val := range []uint8{0xD8} {
+		opcode := val
+		instructions.add(Instruction{opcode, "CLD", func(cpu *CPU) {
+			cpu.Cld()
+		}})
+	}
+
+	//CLV
+	for _, val := range []uint8{0xB8} {
+		opcode := val
+		instructions.add(Instruction{opcode, "CLV", func(cpu *CPU) {
+			cpu.Clv()
+		}})
+	}
+
+	//ADC
+	for _, val := range []uint8{0x69} {
+		opcode := val
+		instructions.add(Instruction{opcode, "ADC", func(cpu *CPU) {
+			addr := cpu.solveTypeAddress(opcode)
+			cpu.Adc(addr)
+			fmt.Printf(" | [%04X] %04x |", addr, cpu.memory.fetch(addr))
 		}})
 	}
 
