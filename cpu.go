@@ -114,7 +114,7 @@ func (cpu *CPU) relativeAddress() (addr uint16) {
 func (cpu *CPU) run() {
 
 	i := 0
-	stopIn := 39
+	stopIn := 73
 	fmt.Println()
 	for {
 		//cpu.printRegisters()
@@ -200,12 +200,25 @@ func (cpu *CPU) Nop() {
 }
 
 func (cpu *CPU) Sei() {
-
+	cpu.registers.P = setBit(cpu.registers.P, I)
 }
 
 //Sec sets to one the 'C' flag the register P
 func (cpu *CPU) Sec() {
 	cpu.registers.P = setBit(cpu.registers.P, C)
+}
+
+//Sec sets to one the 'D' flag the register P
+func (cpu *CPU) Sed() {
+	cpu.registers.P = setBit(cpu.registers.P, D)
+}
+
+func (cpu *CPU) Php() {
+	cpu.push(uint8(cpu.registers.P))
+}
+
+func (cpu *CPU) Pla() {
+	cpu.registers.A = cpu.setZFlag(cpu.pull()) //DÚVIDA!! NÃO SEI SE É Z OU ZN
 }
 
 // Sets the bit at pos in the integer n.
@@ -235,6 +248,11 @@ func (cpu *CPU) Jsr(address uint16) {
 	cpu.registers.PC = address
 }
 
+//Rts instruction is used at the end of a subroutine to return to the calling routine. It pulls the program counter (minus one) from the stack.
+func (cpu *CPU) Rts() {
+	cpu.registers.PC = cpu.pull16() + 1
+}
+
 /*Lsr shifts all bits right one position.
  *0 is shifted into bit 7 and the original bit 0 is shifted into the Carry.
  */
@@ -255,6 +273,27 @@ func (cpu *CPU) Bcc(addr uint16) {
 	}
 }
 
+//Bvs If the overflow flag is set then add the relative displacement to the program counter to cause a branch to a new location.
+func (cpu *CPU) Bvs(addr uint16) {
+	if getBit(uint8(cpu.registers.P), uint8(V)) != 0 {
+		cpu.registers.PC = addr
+	}
+}
+
+//Bvc If the overflow flag is clear then add the relative displacement to the program counter to cause a branch to a new location.
+func (cpu *CPU) Bvc(addr uint16) {
+	if getBit(uint8(cpu.registers.P), uint8(V)) == 0 {
+		cpu.registers.PC = addr
+	}
+}
+
+//Bpl If the negative flag is clear then add the relative displacement to the program counter to cause a branch to a new location.
+func (cpu *CPU) Bpl(addr uint16) {
+	if getBit(uint8(cpu.registers.P), uint8(N)) == 0 {
+		cpu.registers.PC = addr
+	}
+}
+
 //Bne If the zero flag is clear then add the relative displacement to the program counter to cause a branch to a new location.
 func (cpu *CPU) Bne(addr uint16) {
 	if cpu.registers.P&(Z+1) == 0 {
@@ -269,17 +308,30 @@ func (cpu *CPU) Beq(addr uint16) {
 	}
 }
 
-func (cpu *CPU) Bpl(addr uint16) {
-	if cpu.registers.P&N == 0 {
-		cpu.registers.PC = addr
-	}
+func getBit(number uint8, pos uint8) uint8 {
+	return ((number >> pos) & 1)
 }
 
 //Bit Necessário dá uma refatorada depois para ficar mais clara
 func (cpu *CPU) Bit(addr uint16) {
 	value := cpu.memory.fetch(addr)
 	cpu.setZFlag(value & cpu.registers.A)
-	cpu.registers.P = (cpu.registers.P & ^(N) & ^(V)) | Status(value&uint8((V)|(N)))
+
+	memN := getBit(value, 7)
+	memV := getBit(value, 6)
+	registerP := cpu.registers.P
+	if memN == 1 {
+		registerP = setBit(registerP, 7)
+	} else {
+		registerP = clearBit(registerP, 7)
+	}
+
+	if memV == 1 {
+		registerP = setBit(registerP, 6)
+	} else {
+		registerP = clearBit(registerP, 6)
+	}
+	cpu.registers.P = registerP
 }
 
 /*LsrA is a LSR in mode Accumulator
@@ -348,6 +400,12 @@ func (cpu *CPU) setZNFlags(value uint8) uint8 {
 func (cpu *CPU) Inc(addr uint16) {
 	value := cpu.memory.fetch(addr)
 	cpu.memory.store(addr, cpu.setZNFlags(value+1))
+}
+
+func (cpu *CPU) And(addr uint16) {
+	value := cpu.memory.fetch(addr)
+	cpu.registers.A = cpu.setZFlag(cpu.registers.A & value)
+
 }
 
 func main() {

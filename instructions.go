@@ -77,6 +77,14 @@ func newInstructionsTable() InstructionsTable {
 		}})
 	}
 
+	//RTS
+	for _, val := range []uint8{0x60} {
+		opcode := val
+		instructions.add(Instruction{opcode, "RTS", func(cpu *CPU) {
+			cpu.Rts()
+		}})
+	}
+
 	//LDA
 
 	for _, val := range []uint8{0xA5, 0xA9} {
@@ -199,7 +207,19 @@ func newInstructionsTable() InstructionsTable {
 	for _, val := range []uint8{0x70} {
 		opcode := val
 		instructions.add(Instruction{opcode, "BVS", func(cpu *CPU) {
+			addr := cpu.relativeAddress()
+			cpu.Bvs(addr)
+			fmt.Printf(" | [%04X] %04x |", addr, cpu.memory.fetch(addr))
+		}})
+	}
 
+	//BVC
+	for _, val := range []uint8{0x50} {
+		opcode := val
+		instructions.add(Instruction{opcode, "BVC", func(cpu *CPU) {
+			addr := cpu.relativeAddress()
+			cpu.Bvc(addr)
+			fmt.Printf(" | [%04X] %04x |", addr, cpu.memory.fetch(addr))
 		}})
 	}
 
@@ -207,11 +227,9 @@ func newInstructionsTable() InstructionsTable {
 	for _, val := range []uint8{0x10} {
 		opcode := val
 		instructions.add(Instruction{opcode, "BPL", func(cpu *CPU) {
-			addr := cpu.registers.PC
-			cpu.registers.PC += 1
-			//addr := cpu.immediateAddress()
-			//cpu.Bcs(addr)
-			fmt.Printf(" | [%04X] %04x |", addr, cpu.memory.fetch(addr+2))
+			addr := cpu.relativeAddress()
+			cpu.Bpl(addr)
+			fmt.Printf(" | [%04X] %04x |", addr, cpu.memory.fetch(addr))
 		}})
 	}
 
@@ -280,6 +298,30 @@ func newInstructionsTable() InstructionsTable {
 		}})
 	}
 
+	//SED
+	for _, val := range []uint8{0xF8} {
+		opcode := val
+		instructions.add(Instruction{opcode, "SED", func(cpu *CPU) {
+			cpu.Sed()
+		}})
+	}
+
+	//PHP
+	for _, val := range []uint8{0x08} {
+		opcode := val
+		instructions.add(Instruction{opcode, "PHP", func(cpu *CPU) {
+			cpu.Php()
+		}})
+	}
+
+	//PLA
+	for _, val := range []uint8{0x68} {
+		opcode := val
+		instructions.add(Instruction{opcode, "PLA", func(cpu *CPU) {
+			cpu.Pla()
+		}})
+	}
+
 	//TXS
 	for _, val := range []uint8{0x9A} {
 		opcode := val
@@ -293,6 +335,16 @@ func newInstructionsTable() InstructionsTable {
 		opcode := val
 		instructions.add(Instruction{opcode, "NOP", func(cpu *CPU) {
 			cpu.Nop()
+		}})
+	}
+
+	//AND
+	for _, val := range []uint8{0x29} {
+		opcode := val
+		instructions.add(Instruction{opcode, "AND", func(cpu *CPU) {
+			addr := cpu.solveTypeAddress(opcode)
+			cpu.And(addr)
+			fmt.Printf(" | [%04X] %04x |", addr, cpu.memory.fetch(addr))
 		}})
 	}
 
