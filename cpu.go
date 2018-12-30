@@ -432,6 +432,32 @@ func (cpu *CPU) Inc(addr uint16) {
 	cpu.memory.store(addr, cpu.setZNFlags(value+1))
 }
 
+func (cpu *CPU) Sbc(addr uint16) {
+	value := uint16(cpu.memory.fetch(addr))
+
+	if getBit(uint8(cpu.registers.P), uint8(D)) == 0 {
+		value ^= 0xff
+	} else {
+		value = 0x99 - value
+	}
+
+	registerA := cpu.registers.A
+	if getBit(uint8(cpu.registers.P), uint8(D)) == 0 {
+		result := cpu.setCFlagAddition(int(registerA) + int(value) + int(getBit(uint8(cpu.registers.P), uint8(C))))
+		cpu.registers.A = cpu.setZNFlags(cpu.setVFlagAddition(uint16(registerA), uint16(value), uint16(result)))
+	} else {
+
+		low := uint16(registerA&0x000f) + uint16(value&0x000f) + uint16(getBit(uint8(cpu.registers.P), uint8(C)))
+		high := uint16(registerA&0x00f0) + uint16(value&0x00f0)
+
+		result := cpu.setCFlagAddition(int(high | (low & 0x000f)))
+
+		result = cpu.setVFlagAddition(uint16(registerA), uint16(value), uint16(result))
+		result = cpu.setZNFlags(result)
+		cpu.registers.A = result
+	}
+}
+
 //Adc add with carry | Função dando bugs, consertar depois!!!!!!!!
 func (cpu *CPU) Adc(addr uint16) {
 
@@ -533,6 +559,31 @@ func (cpu *CPU) Cpy(addr uint16) {
 //Cpx compares mem with register X
 func (cpu *CPU) Cpx(addr uint16) {
 	cpu.compareMemReg(addr, &cpu.registers.X)
+}
+
+func (cpu *CPU) incrementRegister(register *byte) {
+	*register++
+	if *register == 0 {
+		cpu.registers.P = setBit(cpu.registers.P, Z)
+	} else {
+		cpu.registers.P = clearBit(cpu.registers.P, Z)
+	}
+
+	if getBit(uint8(*register), uint8(N)) == 1 {
+		cpu.registers.P = setBit(cpu.registers.P, N)
+	} else {
+		cpu.registers.P = clearBit(cpu.registers.P, N)
+	}
+}
+
+//Iny
+func (cpu *CPU) Iny() {
+	cpu.incrementRegister(&cpu.registers.Y)
+}
+
+//Inx
+func (cpu *CPU) Inx() {
+	cpu.incrementRegister(&cpu.registers.X)
 }
 
 func main() {

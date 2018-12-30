@@ -454,6 +454,30 @@ func newInstructionsTable() InstructionsTable {
 			fmt.Printf(" | [%04X] %04x |", addr, cpu.memory.fetch(addr))
 		}})
 	}
+	//SBC
+	for _, val := range []uint8{0xE9} {
+		opcode := val
+		instructions.add(Instruction{opcode, "SBC", func(cpu *CPU) {
+			addr := cpu.solveTypeAddress(opcode)
+			cpu.Sbc(addr)
+			fmt.Printf(" | [%04X] %04x |", addr, cpu.memory.fetch(addr))
+		}})
+	}
 
+	//INY
+	for _, val := range []uint8{0xC8} {
+		opcode := val
+		instructions.add(Instruction{opcode, "INY", func(cpu *CPU) {
+			cpu.Iny()
+		}})
+	}
+
+	//INX
+	for _, val := range []uint8{0xE8} {
+		opcode := val
+		instructions.add(Instruction{opcode, "INX", func(cpu *CPU) {
+			cpu.Inx()
+		}})
+	}
 	return instructions
 }
