@@ -276,6 +276,13 @@ func (cpu *CPU) Rts() {
 	cpu.registers.PC = cpu.pull16() + 1
 }
 
+//Rti return from interrupt
+func (cpu *CPU) Rti() {
+	cpu.registers.P = Status(cpu.pull())
+	cpu.registers.P = setBit(cpu.registers.P, U) //uma gambiarra básica, remover depois
+	cpu.registers.PC = cpu.pull16()
+}
+
 /*Lsr shifts all bits right one position.
  *0 is shifted into bit 7 and the original bit 0 is shifted into the Carry.
  */
@@ -369,23 +376,31 @@ func (cpu *CPU) Bit(addr uint16) {
  */
 func (cpu *CPU) LsrA() {
 	value := cpu.shift(1, cpu.registers.A)
+	cpu.setZNFlags(value)
+	cpu.registers.A = value
+}
+
+//Asla
+func (cpu *CPU) AslA() {
+	//NÃO ESTÁ FUNCIONANDO!!
+	value := cpu.shift(0, cpu.registers.A)
+	cpu.setZNFlags(value)
 	cpu.registers.A = value
 }
 
 func (cpu *CPU) shift(direction int, value uint8) uint8 {
-
 	c := Status(0)
 
 	switch direction {
 	case 0:
-		c = Status((value & uint8(N)) >> 7)
+		c = Status((value & uint8(N+1)) >> 7)
 		value <<= 1
 	case 1:
-		c = Status(value & uint8(C))
+		c = Status(value & uint8(C+1))
 		value >>= 1
 	}
 
-	cpu.registers.P &= ^C
+	cpu.registers.P &= ^(C + 1)
 	cpu.registers.P |= c
 
 	return value
@@ -576,6 +591,21 @@ func (cpu *CPU) incrementRegister(register *byte) {
 	}
 }
 
+func (cpu *CPU) decrementRegister(register *byte) {
+	*register--
+	if *register == 0 {
+		cpu.registers.P = setBit(cpu.registers.P, Z)
+	} else {
+		cpu.registers.P = clearBit(cpu.registers.P, Z)
+	}
+
+	if getBit(uint8(*register), uint8(N)) == 1 {
+		cpu.registers.P = setBit(cpu.registers.P, N)
+	} else {
+		cpu.registers.P = clearBit(cpu.registers.P, N)
+	}
+}
+
 //Iny
 func (cpu *CPU) Iny() {
 	cpu.incrementRegister(&cpu.registers.Y)
@@ -584,6 +614,91 @@ func (cpu *CPU) Iny() {
 //Inx
 func (cpu *CPU) Inx() {
 	cpu.incrementRegister(&cpu.registers.X)
+}
+
+//Dey
+func (cpu *CPU) Dey() {
+	cpu.decrementRegister(&cpu.registers.Y)
+}
+
+//Dey
+func (cpu *CPU) Dex() {
+	cpu.decrementRegister(&cpu.registers.X)
+}
+
+//Ta is a transfer accumulator
+func (cpu *CPU) TaReg(register *byte) {
+	*register = cpu.registers.A
+	if *register == 0 {
+		cpu.registers.P = setBit(cpu.registers.P, Z)
+	} else {
+		cpu.registers.P = clearBit(cpu.registers.P, Z)
+	}
+
+	if getBit(uint8(*register), uint8(N)) == 1 {
+		cpu.registers.P = setBit(cpu.registers.P, N)
+	} else {
+		cpu.registers.P = clearBit(cpu.registers.P, N)
+	}
+}
+
+//Tay copies the current contents of the accumulator into the Y register
+func (cpu *CPU) Tay() {
+	cpu.TaReg(&cpu.registers.Y)
+}
+
+//Tax copies the current contents of the accumulator into the X register
+func (cpu *CPU) Tax() {
+	cpu.TaReg(&cpu.registers.X)
+}
+
+//TRegA copies the contents of the register to accumulator
+func (cpu *CPU) TRegA(register *byte) {
+	cpu.registers.A = *register
+
+	if *register == 0 {
+		cpu.registers.P = setBit(cpu.registers.P, Z)
+	} else {
+		cpu.registers.P = clearBit(cpu.registers.P, Z)
+	}
+
+	if getBit(uint8(*register), uint8(N)) == 1 {
+		cpu.registers.P = setBit(cpu.registers.P, N)
+	} else {
+		cpu.registers.P = clearBit(cpu.registers.P, N)
+	}
+}
+
+//Tya copies the current contents of the Y register into the accumulator
+func (cpu *CPU) Tya() {
+	cpu.TRegA(&cpu.registers.Y)
+}
+
+//Txa copies the current contents of the X register into the accumulator
+func (cpu *CPU) Txa() {
+	cpu.TRegA(&cpu.registers.X)
+}
+
+//TSpReg copies the current contents of the stack register into the register
+func (cpu *CPU) TSpReg(register *byte) {
+
+	*register = cpu.registers.SP
+
+	if *register == 0 {
+		cpu.registers.P = setBit(cpu.registers.P, Z)
+	} else {
+		cpu.registers.P = clearBit(cpu.registers.P, Z)
+	}
+
+	if getBit(uint8(*register), uint8(N)) == 1 {
+		cpu.registers.P = setBit(cpu.registers.P, N)
+	} else {
+		cpu.registers.P = clearBit(cpu.registers.P, N)
+	}
+}
+
+func (cpu *CPU) Tsx() {
+	cpu.TSpReg(&cpu.registers.X)
 }
 
 func main() {

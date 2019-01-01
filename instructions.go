@@ -85,9 +85,17 @@ func newInstructionsTable() InstructionsTable {
 		}})
 	}
 
+	//RTI
+	for _, val := range []uint8{0x40} {
+		opcode := val
+		instructions.add(Instruction{opcode, "RTI", func(cpu *CPU) {
+			cpu.Rti()
+		}})
+	}
+
 	//LDA
 
-	for _, val := range []uint8{0xA5, 0xA9} {
+	for _, val := range []uint8{0xA5, 0xA9, 0XAD} {
 		opcode := val
 		instructions.add(Instruction{opcode, "LDA", func(cpu *CPU) {
 			addr := cpu.solveTypeAddress(opcode)
@@ -98,7 +106,7 @@ func newInstructionsTable() InstructionsTable {
 
 	//LDX
 
-	for _, val := range []uint8{0xA2} {
+	for _, val := range []uint8{0xA2, 0XAE} {
 		opcode := val
 		instructions.add(Instruction{opcode, "LDX", func(cpu *CPU) {
 			addr := cpu.solveTypeAddress(opcode)
@@ -128,7 +136,7 @@ func newInstructionsTable() InstructionsTable {
 	}
 
 	//STX
-	for _, val := range []uint8{0x86} {
+	for _, val := range []uint8{0x86, 0x8E} {
 		opcode := val
 		instructions.add(Instruction{opcode, "STX", func(cpu *CPU) {
 			addr := cpu.solveTypeAddress(opcode)
@@ -158,6 +166,20 @@ func newInstructionsTable() InstructionsTable {
 				addr := cpu.solveTypeAddress(opcode)
 				cpu.store(addr, cpu.registers.A)
 				fmt.Printf(" | [%04X] %04x |", addr, cpu.memory.fetch(addr))
+			}
+
+		}})
+	}
+
+	//ASL
+	for _, val := range []uint8{0x0A} {
+		opcode := val
+		instructions.add(Instruction{opcode, "ASL", func(cpu *CPU) {
+			if instrsMode[opcode] == modeAccumulator {
+				cpu.AslA()
+				fmt.Printf(" | [A:] %04x |", cpu.registers.A)
+			} else {
+				fmt.Printf("\n Não implementada\n")
 			}
 
 		}})
@@ -464,6 +486,22 @@ func newInstructionsTable() InstructionsTable {
 		}})
 	}
 
+	//DEY
+	for _, val := range []uint8{0x88} {
+		opcode := val
+		instructions.add(Instruction{opcode, "DEY", func(cpu *CPU) {
+			cpu.Dey()
+		}})
+	}
+
+	//DEX
+	for _, val := range []uint8{0xCA} {
+		opcode := val
+		instructions.add(Instruction{opcode, "DEX", func(cpu *CPU) {
+			cpu.Dex()
+		}})
+	}
+
 	//INY
 	for _, val := range []uint8{0xC8} {
 		opcode := val
@@ -479,5 +517,46 @@ func newInstructionsTable() InstructionsTable {
 			cpu.Inx()
 		}})
 	}
+
+	//Tay
+	for _, val := range []uint8{0xA8} {
+		opcode := val
+		instructions.add(Instruction{opcode, "TAY", func(cpu *CPU) {
+			cpu.Tay()
+		}})
+	}
+
+	//Tax
+	for _, val := range []uint8{0xAA} {
+		opcode := val
+		instructions.add(Instruction{opcode, "TAX", func(cpu *CPU) {
+			cpu.Tax()
+		}})
+	}
+
+	//Tya
+	for _, val := range []uint8{0x98} {
+		opcode := val
+		instructions.add(Instruction{opcode, "TYA", func(cpu *CPU) {
+			cpu.Tya()
+		}})
+	}
+
+	//Txa
+	for _, val := range []uint8{0x8A} {
+		opcode := val
+		instructions.add(Instruction{opcode, "TXA", func(cpu *CPU) {
+			cpu.Txa()
+		}})
+	}
+
+	//Tsx
+	for _, val := range []uint8{0xBA} {
+		opcode := val
+		instructions.add(Instruction{opcode, "TSX", func(cpu *CPU) {
+			cpu.Tsx()
+		}})
+	}
+
 	return instructions
 }
