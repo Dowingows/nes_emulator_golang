@@ -163,9 +163,9 @@ func newInstructionsTable() InstructionsTable {
 				cpu.LsrA()
 				fmt.Printf(" | [A:] %04x |", cpu.registers.A)
 			} else {
-				addr := cpu.solveTypeAddress(opcode)
+				/*addr := cpu.solveTypeAddress(opcode)
 				cpu.store(addr, cpu.registers.A)
-				fmt.Printf(" | [%04X] %04x |", addr, cpu.memory.fetch(addr))
+				fmt.Printf(" | [%04X] %04x |", addr, cpu.memory.fetch(addr))*/
 			}
 
 		}})
@@ -177,6 +177,20 @@ func newInstructionsTable() InstructionsTable {
 		instructions.add(Instruction{opcode, "ASL", func(cpu *CPU) {
 			if instrsMode[opcode] == modeAccumulator {
 				cpu.AslA()
+				fmt.Printf(" | [A:] %04x |", cpu.registers.A)
+			} else {
+				fmt.Printf("\n Não implementada\n")
+			}
+
+		}})
+	}
+
+	//ROR
+	for _, val := range []uint8{0x6A} {
+		opcode := val
+		instructions.add(Instruction{opcode, "ROR", func(cpu *CPU) {
+			if instrsMode[opcode] == modeAccumulator {
+				cpu.RorA()
 				fmt.Printf(" | [A:] %04x |", cpu.registers.A)
 			} else {
 				fmt.Printf("\n Não implementada\n")

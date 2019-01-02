@@ -125,7 +125,7 @@ func (cpu *CPU) run() {
 		cpu.registers.PC++
 
 		if instr.fetch == nil {
-			log.Fatalf("Instrução não encontrada!! Abortar <{Opcode: 0x%02x}>", opcode)
+			fmt.Println("\nInstrução não encontrada!! Abortar <{Opcode: 0x%02x}>", opcode)
 			break
 		}
 
@@ -287,7 +287,30 @@ func (cpu *CPU) Rti() {
  *0 is shifted into bit 7 and the original bit 0 is shifted into the Carry.
  */
 func (cpu *CPU) Lsr(addr uint16) {
-	value := cpu.shift(1, cpu.memory.fetch(addr))
+	value := cpu.memory.fetch(addr)
+
+	oldC := getBit(uint8(value), uint8(C))
+
+	value >>= 1
+
+	if getBit(uint8(value), uint8(N)) == 1 {
+		cpu.registers.P = setBit(cpu.registers.P, N)
+	} else {
+		cpu.registers.P = clearBit(cpu.registers.P, N)
+	}
+
+	if value == 0 {
+		cpu.registers.P = setBit(cpu.registers.P, Z)
+	} else {
+		cpu.registers.P = clearBit(cpu.registers.P, Z)
+	}
+
+	if oldC == 1 {
+		cpu.registers.P = setBit(cpu.registers.P, C)
+	} else {
+		cpu.registers.P = clearBit(cpu.registers.P, C)
+	}
+
 	cpu.memory.store(addr, value)
 }
 
@@ -382,9 +405,57 @@ func (cpu *CPU) LsrA() {
 
 //Asla
 func (cpu *CPU) AslA() {
-	//NÃO ESTÁ FUNCIONANDO!!
-	value := cpu.shift(0, cpu.registers.A)
-	cpu.setZNFlags(value)
+	value := cpu.registers.A
+
+	oldN := getBit(uint8(value), uint8(N))
+
+	value <<= 1
+
+	if getBit(uint8(value), uint8(N)) == 1 {
+		cpu.registers.P = setBit(cpu.registers.P, N)
+	} else {
+		cpu.registers.P = clearBit(cpu.registers.P, N)
+	}
+
+	if value == 0 {
+		cpu.registers.P = setBit(cpu.registers.P, Z)
+	} else {
+		cpu.registers.P = clearBit(cpu.registers.P, Z)
+	}
+
+	if oldN == 1 {
+		cpu.registers.P = setBit(cpu.registers.P, C)
+	} else {
+		cpu.registers.P = clearBit(cpu.registers.P, C)
+	}
+
+	cpu.registers.A = value
+}
+
+/*Não funciona!!*/
+func (cpu *CPU) RorA() {
+	value := cpu.registers.A
+	oldValue := value
+	value >>= 1
+
+	if getBit(uint8(value), uint8(N)) == 1 {
+		cpu.registers.P = setBit(cpu.registers.P, N)
+	} else {
+		cpu.registers.P = clearBit(cpu.registers.P, N)
+	}
+
+	if value == 0 {
+		cpu.registers.P = setBit(cpu.registers.P, Z)
+	} else {
+		cpu.registers.P = clearBit(cpu.registers.P, Z)
+	}
+
+	if getBit(uint8(oldValue), uint8(C)) == 1 {
+		cpu.registers.P = setBit(cpu.registers.P, C)
+	} else {
+		cpu.registers.P = clearBit(cpu.registers.P, C)
+	}
+
 	cpu.registers.A = value
 }
 
@@ -706,7 +777,7 @@ func main() {
 	var m Memory
 	cpu := CPU{}
 	cpu.init(m)
-	fmt.Printf("\n Número de instruções: %d", len(cpu.instructionsTable))
+
 	/*for _, value := range cpu.instructionsTable {
 		fmt.Printf(value.toString())
 	}*/
@@ -735,6 +806,8 @@ func main() {
 	cpu.registers.PC = 0xC000
 	cpu.memory.loadCode(prg, cpu.registers.PC)
 	cpu.run()
+
+	fmt.Printf("\n Número de instruções: %d\n", len(cpu.instructionsTable))
 	//cpu.printRegisters()
 
 	//path := "roms/galaga.nes"
