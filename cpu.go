@@ -432,29 +432,54 @@ func (cpu *CPU) AslA() {
 	cpu.registers.A = value
 }
 
-/*Não funciona!!*/
 func (cpu *CPU) RorA() {
 	value := cpu.registers.A
 	oldValue := value
 	value >>= 1
 
-	if getBit(uint8(value), uint8(N)) == 1 {
-		cpu.registers.P = setBit(cpu.registers.P, N)
-	} else {
-		cpu.registers.P = clearBit(cpu.registers.P, N)
+	if value == 0x00 {
+		if getBit(uint8(oldValue), uint8(C)) == 1 {
+			value = byte(setBit(Status(value), N))
+		} else {
+			value = byte(clearBit(Status(value), N))
+		}
 	}
 
-	if value == 0 {
-		cpu.registers.P = setBit(cpu.registers.P, Z)
-	} else {
-		cpu.registers.P = clearBit(cpu.registers.P, Z)
-	}
+	//fmt.Printf("\n Eu estou aqui! %04x\n", value)
 
 	if getBit(uint8(oldValue), uint8(C)) == 1 {
-		cpu.registers.P = setBit(cpu.registers.P, C)
+		cpu.registers.P = setBit(Status(cpu.registers.P), C)
 	} else {
-		cpu.registers.P = clearBit(cpu.registers.P, C)
+		cpu.registers.P = clearBit(Status(cpu.registers.P), C)
 	}
+
+	cpu.setZNFlags(value)
+
+	cpu.registers.A = value
+}
+
+func (cpu *CPU) RolA() {
+	value := cpu.registers.A
+	oldValue := value
+	value <<= 1
+
+	if value == 0x00 {
+		if getBit(uint8(oldValue), uint8(N)) == 1 {
+			value = byte(setBit(Status(value), C))
+		} else {
+			value = byte(clearBit(Status(value), C))
+		}
+	}
+
+	//fmt.Printf("\n Eu estou aqui! %04x\n", value)
+
+	if getBit(uint8(oldValue), uint8(N)) == 1 {
+		cpu.registers.P = setBit(Status(cpu.registers.P), C)
+	} else {
+		cpu.registers.P = clearBit(Status(cpu.registers.P), C)
+	}
+
+	cpu.setZNFlags(value)
 
 	cpu.registers.A = value
 }

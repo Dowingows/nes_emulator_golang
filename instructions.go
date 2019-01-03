@@ -199,6 +199,20 @@ func newInstructionsTable() InstructionsTable {
 		}})
 	}
 
+	//ROR
+	for _, val := range []uint8{0x2A} {
+		opcode := val
+		instructions.add(Instruction{opcode, "ROR", func(cpu *CPU) {
+			if instrsMode[opcode] == modeAccumulator {
+				cpu.RolA()
+				fmt.Printf(" | [A:] %04x |", cpu.registers.A)
+			} else {
+				fmt.Printf("\n Não implementada\n")
+			}
+
+		}})
+	}
+
 	//BCS
 	for _, val := range []uint8{0xB0} {
 		opcode := val
