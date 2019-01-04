@@ -51,7 +51,6 @@ func (cpu *CPU) execute(opcode byte) {
 }
 
 ///Adressing modes
-
 func (cpu *CPU) solveTypeAddress(opcode uint8) uint16 {
 
 	addr := uint16(0)
@@ -66,6 +65,9 @@ func (cpu *CPU) solveTypeAddress(opcode uint8) uint16 {
 		break
 	case modeZeroPage:
 		addr = cpu.zeroPageAddress()
+		break
+	case modeIndexedIndirect:
+		addr = cpu.indexedIndirectAddress()
 		break
 	default:
 		fmt.Printf("\n* * * * Não encontrado esse MODE!! %d * * * * \n", instrsMode[opcode])
@@ -109,6 +111,34 @@ func (cpu *CPU) relativeAddress() (addr uint16) {
 	addr = cpu.registers.PC + offset
 
 	return
+}
+
+func (cpu *CPU) indirectIndexedAddress() (addr uint16) {
+	value := cpu.memory.fetch(cpu.registers.PC)
+	address := uint16(value)
+	cpu.registers.PC++
+
+	low := cpu.memory.fetch(address)
+	high := cpu.memory.fetch((address + 1) & 0x00ff)
+
+	address = (uint16(high) << 8) | uint16(low)
+
+	addr = address + uint16(cpu.registers.Y)
+
+	return addr
+}
+
+func (cpu *CPU) indexedIndirectAddress() (addr uint16) {
+	value := cpu.memory.fetch(cpu.registers.PC)
+	address := uint16(value + cpu.registers.X)
+	cpu.registers.PC++
+
+	low := cpu.memory.fetch(address)
+	high := cpu.memory.fetch((address + 1) & 0x00ff)
+
+	addr = (uint16(high) << 8) | uint16(low)
+
+	return addr
 }
 
 func (cpu *CPU) run() {
@@ -375,11 +405,13 @@ func getBit(number uint8, pos uint8) uint8 {
 //Bit Necessário dá uma refatorada depois para ficar mais clara
 func (cpu *CPU) Bit(addr uint16) {
 	value := cpu.memory.fetch(addr)
+	//fmt.Printf("\n---- Eu sou o %04x\n", value)
 	cpu.setZFlag(value & cpu.registers.A)
 
 	memN := getBit(value, 7)
 	memV := getBit(value, 6)
 	registerP := cpu.registers.P
+
 	if memN == 1 {
 		registerP = setBit(registerP, 7)
 	} else {
@@ -401,6 +433,34 @@ func (cpu *CPU) LsrA() {
 	value := cpu.shift(1, cpu.registers.A)
 	cpu.setZNFlags(value)
 	cpu.registers.A = value
+}
+
+func (cpu *CPU) Asl(addr uint16) {
+	value := cpu.memory.fetch(addr)
+
+	oldN := getBit(uint8(value), uint8(N))
+
+	value <<= 1
+
+	if getBit(uint8(value), uint8(N)) == 1 {
+		cpu.registers.P = setBit(cpu.registers.P, N)
+	} else {
+		cpu.registers.P = clearBit(cpu.registers.P, N)
+	}
+
+	if value == 0 {
+		cpu.registers.P = setBit(cpu.registers.P, Z)
+	} else {
+		cpu.registers.P = clearBit(cpu.registers.P, Z)
+	}
+
+	if oldN == 1 {
+		cpu.registers.P = setBit(cpu.registers.P, C)
+	} else {
+		cpu.registers.P = clearBit(cpu.registers.P, C)
+	}
+
+	cpu.store(addr, value)
 }
 
 //Asla
@@ -432,6 +492,32 @@ func (cpu *CPU) AslA() {
 	cpu.registers.A = value
 }
 
+func (cpu *CPU) Ror(addr uint16) {
+	value := cpu.memory.fetch(addr)
+	oldValue := value
+	value >>= 1
+
+	if value == 0x00 {
+		if getBit(uint8(oldValue), uint8(C)) == 1 {
+			value = byte(setBit(Status(value), N))
+		} else {
+			value = byte(clearBit(Status(value), N))
+		}
+	}
+
+	//fmt.Printf("\n Eu estou aqui! %04x\n", value)
+
+	if getBit(uint8(oldValue), uint8(C)) == 1 {
+		cpu.registers.P = setBit(Status(cpu.registers.P), C)
+	} else {
+		cpu.registers.P = clearBit(Status(cpu.registers.P), C)
+	}
+
+	cpu.setZNFlags(value)
+
+	cpu.store(addr, value)
+}
+
 func (cpu *CPU) RorA() {
 	value := cpu.registers.A
 	oldValue := value
@@ -456,6 +542,32 @@ func (cpu *CPU) RorA() {
 	cpu.setZNFlags(value)
 
 	cpu.registers.A = value
+}
+
+func (cpu *CPU) Rol(addr uint16) {
+	value := cpu.memory.fetch(addr)
+	oldValue := value
+	value <<= 1
+
+	if value == 0x00 {
+		if getBit(uint8(oldValue), uint8(N)) == 1 {
+			value = byte(setBit(Status(value), C))
+		} else {
+			value = byte(clearBit(Status(value), C))
+		}
+	}
+
+	//fmt.Printf("\n Eu estou aqui! %04x\n", value)
+
+	if getBit(uint8(oldValue), uint8(N)) == 1 {
+		cpu.registers.P = setBit(Status(cpu.registers.P), C)
+	} else {
+		cpu.registers.P = clearBit(Status(cpu.registers.P), C)
+	}
+
+	cpu.setZNFlags(value)
+
+	cpu.store(addr, value)
 }
 
 func (cpu *CPU) RolA() {
