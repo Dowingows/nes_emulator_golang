@@ -95,7 +95,7 @@ func newInstructionsTable() InstructionsTable {
 
 	//LDA
 
-	for _, val := range []uint8{0xA5, 0xA9, 0xAD, 0xA1} {
+	for _, val := range []uint8{0xA5, 0xA9, 0xAD, 0xA1, 0xB1, 0xB9, 0xB5, 0xBD} {
 		opcode := val
 		instructions.add(Instruction{opcode, "LDA", func(cpu *CPU) {
 			addr := cpu.solveTypeAddress(opcode)
@@ -106,7 +106,7 @@ func newInstructionsTable() InstructionsTable {
 
 	//LDX
 
-	for _, val := range []uint8{0xA2, 0xAE, 0xA6} {
+	for _, val := range []uint8{0xA2, 0xAE, 0xA6, 0xA2, 0xB6, 0xBE} {
 		opcode := val
 		instructions.add(Instruction{opcode, "LDX", func(cpu *CPU) {
 			addr := cpu.solveTypeAddress(opcode)
@@ -116,7 +116,7 @@ func newInstructionsTable() InstructionsTable {
 	}
 
 	//LDY
-	for _, val := range []uint8{0xA0, 0xA4, 0xAC} {
+	for _, val := range []uint8{0xA0, 0xA4, 0xAC, 0xB4, 0xBC} {
 		opcode := val
 		instructions.add(Instruction{opcode, "LDY", func(cpu *CPU) {
 			addr := cpu.solveTypeAddress(opcode)
@@ -126,7 +126,7 @@ func newInstructionsTable() InstructionsTable {
 	}
 
 	//STA
-	for _, val := range []uint8{0x85, 0x8D, 0x81} {
+	for _, val := range []uint8{0x85, 0x8D, 0x81, 0x91, 0x99, 0x95, 0x9D} {
 		opcode := val
 		instructions.add(Instruction{opcode, "STA", func(cpu *CPU) {
 			addr := cpu.solveTypeAddress(opcode)
@@ -136,7 +136,7 @@ func newInstructionsTable() InstructionsTable {
 	}
 
 	//STX
-	for _, val := range []uint8{0x86, 0x8E} {
+	for _, val := range []uint8{0x86, 0x8E, 0x96} {
 		opcode := val
 		instructions.add(Instruction{opcode, "STX", func(cpu *CPU) {
 			addr := cpu.solveTypeAddress(opcode)
@@ -146,7 +146,7 @@ func newInstructionsTable() InstructionsTable {
 	}
 
 	//STY
-	for _, val := range []uint8{0x8C, 0x84} {
+	for _, val := range []uint8{0x8C, 0x84, 0x94} {
 		opcode := val
 		instructions.add(Instruction{opcode, "STY", func(cpu *CPU) {
 			addr := cpu.solveTypeAddress(opcode)
@@ -156,7 +156,7 @@ func newInstructionsTable() InstructionsTable {
 	}
 
 	//LSR
-	for _, val := range []uint8{0x4A, 0x46, 0x4E} {
+	for _, val := range []uint8{0x4A, 0x46, 0x4E, 0x56, 0x5E} {
 		opcode := val
 		instructions.add(Instruction{opcode, "LSR", func(cpu *CPU) {
 			if instrsMode[opcode] == modeAccumulator {
@@ -172,7 +172,7 @@ func newInstructionsTable() InstructionsTable {
 	}
 
 	//ASL
-	for _, val := range []uint8{0x0A, 0x06, 0x0E} {
+	for _, val := range []uint8{0x0A, 0x06, 0x0E, 0x16, 0x1E} {
 		opcode := val
 		instructions.add(Instruction{opcode, "ASL", func(cpu *CPU) {
 			if instrsMode[opcode] == modeAccumulator {
@@ -187,7 +187,7 @@ func newInstructionsTable() InstructionsTable {
 	}
 
 	//ROR
-	for _, val := range []uint8{0x6A, 0x66, 0x6E} {
+	for _, val := range []uint8{0x6A, 0x66, 0x6E, 0x76, 0x7E} {
 		opcode := val
 		instructions.add(Instruction{opcode, "ROR", func(cpu *CPU) {
 			if instrsMode[opcode] == modeAccumulator {
@@ -202,7 +202,7 @@ func newInstructionsTable() InstructionsTable {
 	}
 
 	//ROL
-	for _, val := range []uint8{0x2A, 0x26, 0x2E} {
+	for _, val := range []uint8{0x2A, 0x26, 0x2E, 0x36, 0x3E} {
 		opcode := val
 		instructions.add(Instruction{opcode, "ROL", func(cpu *CPU) {
 			if instrsMode[opcode] == modeAccumulator {
@@ -307,7 +307,7 @@ func newInstructionsTable() InstructionsTable {
 	}
 
 	//JMP
-	for _, val := range []uint8{0x4C} {
+	for _, val := range []uint8{0x4C, 0x6C} {
 		opcode := val
 		instructions.add(Instruction{opcode, "JMP", func(cpu *CPU) {
 			//oldValue := cpu.registers.PC //Remover
@@ -319,7 +319,7 @@ func newInstructionsTable() InstructionsTable {
 	}
 
 	//DEC
-	for _, val := range []uint8{0xC6, 0xCE} {
+	for _, val := range []uint8{0xC6, 0xCE, 0xD6, 0xDE} {
 		opcode := val
 		instructions.add(Instruction{opcode, "DEC", func(cpu *CPU) {
 
@@ -331,7 +331,7 @@ func newInstructionsTable() InstructionsTable {
 	}
 
 	//INC
-	for _, val := range []uint8{0xE6, 0xEE} {
+	for _, val := range []uint8{0xE6, 0xEE, 0xF6, 0xFE} {
 		opcode := val
 		instructions.add(Instruction{opcode, "INC", func(cpu *CPU) {
 
@@ -343,7 +343,7 @@ func newInstructionsTable() InstructionsTable {
 	}
 
 	//CMP
-	for _, val := range []uint8{0xC9, 0xC1, 0xC5, 0xCD} {
+	for _, val := range []uint8{0xC9, 0xC1, 0xC5, 0xCD, 0xD1, 0xD9, 0xD5, 0xDD} {
 		opcode := val
 		instructions.add(Instruction{opcode, "CMP", func(cpu *CPU) {
 			addr := cpu.solveTypeAddress(opcode)
@@ -437,7 +437,7 @@ func newInstructionsTable() InstructionsTable {
 	}
 
 	//AND
-	for _, val := range []uint8{0x29, 0x21, 0x25, 0x2D} {
+	for _, val := range []uint8{0x29, 0x21, 0x25, 0x2D, 0x31, 0x39, 0x35, 0X3D} {
 		opcode := val
 		instructions.add(Instruction{opcode, "AND", func(cpu *CPU) {
 			addr := cpu.solveTypeAddress(opcode)
@@ -447,7 +447,7 @@ func newInstructionsTable() InstructionsTable {
 	}
 
 	//ORA
-	for _, val := range []uint8{0x09, 0x01, 0x05, 0x0D} {
+	for _, val := range []uint8{0x09, 0x01, 0x05, 0x0D, 0x11, 0x19, 0x15, 0x1D} {
 		opcode := val
 		instructions.add(Instruction{opcode, "ORA", func(cpu *CPU) {
 			addr := cpu.solveTypeAddress(opcode)
@@ -457,7 +457,7 @@ func newInstructionsTable() InstructionsTable {
 	}
 
 	//EOR
-	for _, val := range []uint8{0x49, 0x41, 0x45, 0x4D} {
+	for _, val := range []uint8{0x49, 0x41, 0x45, 0x4D, 0x51, 0x59, 0x55, 0x5D} {
 		opcode := val
 		instructions.add(Instruction{opcode, "EOR", func(cpu *CPU) {
 			addr := cpu.solveTypeAddress(opcode)
@@ -499,7 +499,7 @@ func newInstructionsTable() InstructionsTable {
 	}
 
 	//ADC
-	for _, val := range []uint8{0x69, 0x61, 0x65, 0x6D} {
+	for _, val := range []uint8{0x69, 0x61, 0x65, 0x6D, 0x71, 0x79, 0x75, 0x7D} {
 		opcode := val
 		instructions.add(Instruction{opcode, "ADC", func(cpu *CPU) {
 			addr := cpu.solveTypeAddress(opcode)
@@ -508,7 +508,7 @@ func newInstructionsTable() InstructionsTable {
 		}})
 	}
 	//SBC
-	for _, val := range []uint8{0xE9, 0xE1, 0xE5, 0xED} {
+	for _, val := range []uint8{0xE9, 0xE1, 0xE5, 0xED, 0xF1, 0xF9, 0xF5, 0xFD} {
 		opcode := val
 		instructions.add(Instruction{opcode, "SBC", func(cpu *CPU) {
 			addr := cpu.solveTypeAddress(opcode)

@@ -59,6 +59,12 @@ func (cpu *CPU) solveTypeAddress(opcode uint8) uint16 {
 	case modeAbsolute:
 		addr = cpu.absoluteAddress()
 		break
+	case modeAbsoluteX:
+		addr = cpu.absoluteIndexedXAddress()
+		break
+	case modeAbsoluteY:
+		addr = cpu.absoluteIndexedYAddress()
+		break
 	case modeImmediate:
 		//this is immediate addressing
 		addr = cpu.immediateAddress()
@@ -66,9 +72,22 @@ func (cpu *CPU) solveTypeAddress(opcode uint8) uint16 {
 	case modeZeroPage:
 		addr = cpu.zeroPageAddress()
 		break
+	case modeIndirect:
+		addr = cpu.indirectAddress()
+		break
 	case modeIndexedIndirect:
 		addr = cpu.indexedIndirectAddress()
 		break
+	case modeIndirectIndexed:
+		addr = cpu.indirectIndexedAddress()
+		break
+	case modeZeroPageX:
+		addr = cpu.zeroPageXAddress()
+		break
+	case modeZeroPageY:
+		addr = cpu.zeroPageYAddress()
+		break
+
 	default:
 		fmt.Printf("\n* * * * Não encontrado esse MODE!! %d * * * * \n", instrsMode[opcode])
 		return 0
@@ -139,6 +158,58 @@ func (cpu *CPU) indexedIndirectAddress() (addr uint16) {
 	addr = (uint16(high) << 8) | uint16(low)
 
 	return addr
+}
+
+func (cpu *CPU) indirectAddress() (addr uint16) {
+	low := cpu.memory.fetch(cpu.registers.PC)
+	high := cpu.memory.fetch(cpu.registers.PC + 1)
+	cpu.registers.PC += 2
+
+	aHigh := (uint16(high) << 8) | uint16(low+1)
+	aLow := (uint16(high) << 8) | uint16(low)
+
+	low = cpu.memory.fetch(aLow)
+	high = cpu.memory.fetch(aHigh)
+
+	addr = (uint16(high) << 8) | uint16(low)
+
+	return addr
+}
+
+func (cpu *CPU) absoluteIndexedXAddress() (addr uint16) {
+	low := cpu.memory.fetch(cpu.registers.PC)
+	high := cpu.memory.fetch(cpu.registers.PC + 1)
+	cpu.registers.PC += 2
+
+	address := (uint16(high) << 8) | uint16(low)
+	addr = address + uint16(cpu.registers.X)
+
+	return addr
+}
+
+func (cpu *CPU) absoluteIndexedYAddress() (addr uint16) {
+	low := cpu.memory.fetch(cpu.registers.PC)
+	high := cpu.memory.fetch(cpu.registers.PC + 1)
+	cpu.registers.PC += 2
+
+	address := (uint16(high) << 8) | uint16(low)
+	addr = address + uint16(cpu.registers.Y)
+
+	return addr
+}
+
+func (cpu *CPU) zeroPageXAddress() (addr uint16) {
+	value := cpu.memory.fetch(cpu.registers.PC)
+	addr = uint16(value + cpu.registers.X)
+	cpu.registers.PC++
+	return
+}
+
+func (cpu *CPU) zeroPageYAddress() (addr uint16) {
+	value := cpu.memory.fetch(cpu.registers.PC)
+	addr = uint16(value + cpu.registers.Y)
+	cpu.registers.PC++
+	return
 }
 
 func (cpu *CPU) run() {
@@ -923,7 +994,9 @@ func main() {
 	//instr.fetch(&cpu)
 	//fmt.Println(cpu.instructionsTable.get(0))
 
+	//path := "tests/nestest.nes"
 	path := "tests/nestest.nes"
+
 	data, _ := ioutil.ReadFile(path)
 
 	if string(data[:3]) != "NES" {
